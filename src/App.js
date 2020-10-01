@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import { getAuthHref, formatTracks } from "./spotify"
 import { camelize, removeHash } from "./utils"
 
-const { accessToken, tokenType, expiresIn } = window.location.hash
+const { accessToken, tokenType } = window.location.hash
   .substring(1)
   .split("&")
   .reduce((values, item) => {
@@ -18,27 +18,16 @@ removeHash()
 function App() {
   const [playlist, setPlaylist] = useState(null)
   const [fetching, setFetching] = useState(false)
-  const [idInput, setIdInput] = useState("")
-
-  useEffect(() => {
-    if (!accessToken) return
-  }, [])
-
-  async function getAllTracks() {
-    const res = await fetch(
-      `https://api.spotify.com/v1/playlists/${idInput}/tracks?`,
-      {
-        method: "GET",
-        headers: { Authorization: `${tokenType} ${accessToken}` },
-      }
-    ).then((res) => res.json())
-  }
+  const [input, setInput] = useState("")
 
   async function handleSubmit(e) {
     e.preventDefault()
     setFetching(true)
+
+    const playlistId = input.split(":")[2]
+
     const fetchedPlaylist = await fetch(
-      `https://api.spotify.com/v1/playlists/${idInput}`,
+      `https://api.spotify.com/v1/playlists/${playlistId}`,
       {
         method: "GET",
         headers: { Authorization: `${tokenType} ${accessToken}` },
@@ -52,21 +41,15 @@ function App() {
         method: "GET",
         headers: { Authorization: `${tokenType} ${accessToken}` },
       }).then((res) => res.json())
-      console.log(res)
+
       fetchedPlaylist.tracks.items = [
         ...fetchedPlaylist.tracks.items,
         ...res.items,
       ]
     }
 
-    console.log(
-      fetchedPlaylist.tracks.items,
-      fetchedPlaylist.tracks.items.length
-    )
-
-    //console.log(res)
     setPlaylist(fetchedPlaylist)
-    setIdInput("")
+    setInput("")
     setFetching(false)
   }
 
@@ -76,8 +59,8 @@ function App() {
     return (
       "data:text/plain;charset=utf-8," +
       encodeURIComponent(
-        "Title;Artist;Code\n" +
-          tracks.map(({ name, artists }) => `${name};${artists};\n`).join("")
+        "Title\tArtist\tCode\n" +
+          tracks.map(({ name, artists }) => `${name}\t${artists}\t\n`).join("")
       )
     )
   }
@@ -93,12 +76,12 @@ function App() {
     <div>
       <form type="submit" onSubmit={(e) => handleSubmit(e)}>
         <label htmlFor="playlist-input">
-          Input playlist id:
+          Input spotify URI:
           <input
             id="playlist-input"
             type="text"
-            value={idInput}
-            onChange={(e) => setIdInput(e.target.value)}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
           ></input>
         </label>
         <button disabled={fetching}>Fetch playlist!</button>
